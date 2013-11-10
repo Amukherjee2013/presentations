@@ -1,0 +1,3 @@
+* Bruce Durling's Presentations
+
+  This is a repo of my presentations that I write in org-mode.
