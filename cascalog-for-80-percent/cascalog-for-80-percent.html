@@ -1,0 +1,379 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>(Cascalog for the 80% of Data Science)</title>
+<meta name="author" content="(Bruce Durling)"/>
+<link rel="stylesheet" href="/Users/bld/.emacs.d/non-elpa/reveal.js-2.5.0/css/reveal.min.css"/>
+<link rel="stylesheet" href="/Users/bld/.emacs.d/non-elpa/reveal.js-2.5.0/css/theme/night.css" id="theme"/>
+
+<link rel="stylesheet" href="/Users/bld/.emacs.d/non-elpa/reveal.js-2.5.0/css/print/pdf.css" type="text/css" media="print"/>
+</head>
+<body>
+<div class="reveal">
+<div class="slides">
+<section>
+<h1>Cascalog for the 80% of Data Science</h1>
+<h2>Bruce Durling</h2>
+<h2><a href="mailto:@otfrom & @MastodonC">@otfrom & @MastodonC</a></h2>
+<h2></h2></section>
+<section>
+<section id="sec-1" >
+
+<h2>Nathan Marz</h2>
+<p>
+<a href="http://bit.ly/cascalog">bit.ly/cascalog</a>
+</p>
+</section>
+</section>
+<section>
+<section id="sec-2" >
+
+<h2>Stefan Hübner</h2>
+<p>
+<a href="http://bit.ly/hadoop-sanity">bit.ly/hadoop-sanity</a>
+</p>
+</section>
+</section>
+<section>
+<section id="sec-3" >
+
+<h2>Paul Lam</h2>
+<p>
+<a href="http://bit.ly/cascalog-now">bit.ly/cascalog-now</a>
+</p>
+</section>
+</section>
+<section>
+<section id="sec-4" >
+
+<h2>Paco Nathan</h2>
+<p>
+<a href="http://bit.ly/copa-cascalog">bit.ly/copa-cascalog</a>
+</p>
+</section>
+</section>
+<section>
+<section id="sec-5" >
+
+<h2>CDEC Open Health Data Platform</h2>
+<p>
+<a href="http://github.com/CDECatapult">github.com/CDECatapult</a>
+</p>
+</section>
+</section>
+<section>
+<section id="sec-6" >
+
+<h2>80% of Data Science</h2>
+<p>
+If you don't think you have a data quality problem then you haven't looked at your data.
+</p>
+</section>
+</section>
+<section>
+<section id="sec-7" >
+
+<h2>Fuller Version</h2>
+<p>
+<a href="http://github.com/MastodonC/r4f-data">github.com/MastodonC/r4f-data</a>
+</p>
+</section>
+</section>
+<section>
+<section id="sec-8" >
+
+<h2>Our Data</h2>
+<div class="org-src-container">
+
+<pre class="src src-javascript">["64626338343139662d613765332d343632372d623339302d3665646130623437663038643a6170706172656e742d706f776572": [],
+ "3130383936303a74656d7065726174757265": [["2010-03-18T00:00:00+0000","error:Measurement was not provided by meter",1297773628134], ["2010-03-18T00:05:00+0000","error:Measurement was not provided by meter",1297773628134], ["2010-03-18T00:10:00+0000","error:Measurement was not provided by meter",1297773628134]],
+ "64343337613563392d376636372d346437642d393830362d3835393833306337666435363a656c656374726963697479436f6e73756d7074696f6e": [["2012-02-01T00:00:00+0000","{\"v\":203127}",1330550899258000], ["2012-02-01T00:05:00+0000","{\"v\":203127}",1330550899258001], ["2012-02-01T00:10:00+0000","{\"v\":203127}",1330550899258002], ["2012-02-01T00:15:00+0000","{\"v\":203127}",1330550899258003], ["2012-02-01T00:20:00+0000","{\"v\":203127}",1330550899259000], ["2012-02-01T00:25:00+0000","{\"v\":203127}",1330550899259001]]]
+</pre>
+</div>
+</section>
+</section>
+<section>
+<section id="sec-9" >
+
+<h2>Taps</h2>
+<div class="org-src-container">
+
+<pre class="src src-clojure">(hfs-textline measurements-in)
+
+(hfs-delimited m7-stage)
+
+(hfs-delimited (str trap-root "/m7"))
+
+(hfs-delimited
+ output
+ :sinkmode :replace
+ :sink-template "%s/%s"
+ :templatefields ["?tsb-id" "?safe-sensor-id"]
+ :outfields ["?tsb-id" "?entity-id" "?sensor-id"
+             "?tstamp" "?value" "?units" "?type" "?period"])
+</pre>
+</div>
+</section>
+</section>
+<section>
+<section id="sec-10" >
+
+<h2>Filtering</h2>
+<div class="org-src-container">
+
+<pre class="src src-clojure">(defn data-line? [^String row]
+  (and (not= -1 (.indexOf row ":"))
+       (.startsWith row "\"")
+       (.endsWith row ",")))
+
+(defn non-aggregation? [^String line]
+  (let [len (.length line)]
+    (and (&gt; len 100)
+         (= -1 (.indexOf
+                (.substring line 0 (min len 300))
+                "=&gt;")))))
+</pre>
+</div>
+</section>
+</section>
+<section>
+<section id="sec-11" >
+
+<h2>mapcat with json</h2>
+<div class="org-src-container">
+
+<pre class="src src-clojure">(defmapcatop verticalize-measurement-rows [^String row]
+  (-&gt;&gt; (json/parse-string row)
+       (remove errored-measurement?)
+       (map (fn [[m-tstamp value _]]
+              [m-tstamp (-&gt; (json/parse-string value)
+                            (get "v"))]))))
+</pre>
+</div>
+</section>
+</section>
+<section>
+<section id="sec-12" >
+
+<h2>mapcat with regex</h2>
+<div class="org-src-container">
+
+<pre class="src src-clojure">;; and only do the json parsing on the individual
+;; elements after splitting the huge string
+(defmapcatop breakout-readings [^String row]
+  (re-seq #"\[[^\]\[]*\]" row))
+
+(defn reading-data [reading-str]
+  (let [[tstamp value _] (json/parse-string reading-str)]
+    [tstamp (-&gt; (json/parse-string value) (get "v"))]))
+</pre>
+</div>
+</section>
+</section>
+<section>
+<section id="sec-13" >
+
+<h2>A scrubbed query</h2>
+<div class="org-src-container">
+
+<pre class="src src-clojure">(defn measurements [input trap]
+  (infof "Getting Measurements.")
+  (&lt;- [?sensor-id ?tstamp ?value]
+      (input ?line)
+      (etl/data-line? ?line)
+      (non-aggregation? ?line)
+      (etl/split-sstable-row ?line :&gt; ?sensor-id-hex ?sensor-data)
+      (sensor-has-data? ?sensor-data)
+      (etl/unhexify ?sensor-id-hex :&gt; ?sensor-id)
+      (breakout-readings ?sensor-data :&gt; ?reading)
+      (non-error-reading? ?reading)
+      (reading-data ?reading :&gt; ?tstamp ?value)
+      (:trap trap)))
+</pre>
+</div>
+</section>
+</section>
+<section>
+<section id="sec-14" >
+
+<h2>Testing with Midje</h2>
+<div class="org-src-container">
+
+<pre class="src src-clojure">(ns r4f-data.measurements-test
+  (:use midje.sweet
+        midje.cascalog
+        r4f-data.measurements))
+
+(def m7-data [["\"64626338343139662d613765332d343632372d623339302d3665646130623437663038643a6170706172656e742d706f776572\": [],"]
+              ["\"3130383936303a74656d7065726174757265\": [[\"2010-03-18T00:00:00+0000\",\"error:Measurement was not provided by meter\",1297773628134], [\"2010-03-18T00:05:00+0000\",\"error:Measurement was not provided by meter\",1297773628134], [\"2010-03-18T00:10:00+0000\",\"error:Measurement was not provided by meter\",1297773628134]],"]
+              ["\"64343337613563392d376636372d346437642d393830362d3835393833306337666435363a656c656374726963697479436f6e73756d7074696f6e\": [[\"2012-02-01T00:00:00+0000\",\"{\\\"v\\\":203127}\",1330550899258000], [\"2012-02-01T00:05:00+0000\",\"{\\\"v\\\":203127}\",1330550899258001], [\"2012-02-01T00:10:00+0000\",\"{\\\"v\\\":203127}\",1330550899258002], [\"2012-02-01T00:15:00+0000\",\"{\\\"v\\\":203127}\",1330550899258003], [\"2012-02-01T00:20:00+0000\",\"{\\\"v\\\":203127}\",1330550899259000], [\"2012-02-01T00:25:00+0000\",\"{\\\"v\\\":203127}\",1330550899259001]],"]])
+
+(fact (measurements m7-data (cascalog.api/stdout)) =&gt;
+      (produces [["d437a5c9-7f67-4d7d-9806-859830c7fd56:electricityConsumption" "2012-02-01T00:00:00+0000" 203127]
+                 ["d437a5c9-7f67-4d7d-9806-859830c7fd56:electricityConsumption" "2012-02-01T00:05:00+0000" 203127]
+                 ["d437a5c9-7f67-4d7d-9806-859830c7fd56:electricityConsumption" "2012-02-01T00:10:00+0000" 203127]
+                 ["d437a5c9-7f67-4d7d-9806-859830c7fd56:electricityConsumption" "2012-02-01T00:15:00+0000" 203127]
+                 ["d437a5c9-7f67-4d7d-9806-859830c7fd56:electricityConsumption" "2012-02-01T00:20:00+0000" 203127]
+                 ["d437a5c9-7f67-4d7d-9806-859830c7fd56:electricityConsumption" "2012-02-01T00:25:00+0000" 203127]]))
+</pre>
+</div>
+</section>
+</section>
+<section>
+<section id="sec-15" >
+
+<h2>Joining Data</h2>
+<div class="org-src-container">
+
+<pre class="src src-clojure">(defn retrofit-data [measurements devices projects trap]
+  (&lt;- [?tsb-id ?entity-id ?sensor-id ?tstamp ?value ?device-id ?type ?units ?period]
+      (measurements :&gt; ?sensor-id ?tstamp ?value)
+      (devices :&gt; ?sensor-id ?device-id ?entity-id ?type ?units ?period)
+      (projects :&gt; _ _ ?entity-id ?tsb-id-dirty _)
+      (string/trim ?tsb-id-dirty :&gt; ?tsb-id)
+      (:trap trap)))
+</pre>
+</div>
+</section>
+</section>
+<section>
+<section id="sec-16" >
+
+<h2>Query planning</h2>
+<p>
+hadoop jar r4f-data.jar s3n://bucket/m7 s3n://bucket/d7 s3n://bucket/projects \
+/user/bld/checkpoint s3n://bucket/output-$(date +%Y%m%d-%H%M) /user/bld/exceptions
+</p>
+
+<div class="org-src-container">
+
+<pre class="src src-clojure">(defn -main [measurements-in devices-in projects-in checkpoint output trap-root &amp; args]
+  (?- "gooddata"
+      (hfs-delimited
+       output
+       :sinkmode :replace
+       :sink-template "%s/%s" :templatefields ["?tsb-id" "?safe-sensor-id"]
+       :outfields ["?tsb-id" "?entity-id" "?sensor-id" "?tstamp" "?value" "?units" "?type" "?period"])
+      (good-retrofit-data
+       (retrofit-data
+        (measurements
+         (hfs-textline measurements-in)
+         (hfs-delimited (str trap-root "/m7")))
+        (devices
+         (hfs-textline devices-in)
+         (hfs-delimited (str trap-root "/d7")))
+        (hfs-delimited projects-in)
+        (hfs-delimited (str trap-root "/r8")))
+       (hfs-delimited (str trap-root "good")))))
+</pre>
+</div>
+</section>
+</section>
+<section>
+<section id="sec-17" >
+
+<h2>workflow</h2>
+<div class="org-src-container">
+
+<pre class="src src-clojure">(defn -main [measurements-in devices-in projects-in checkpoint output trap-root &amp; args]
+  (workflow
+   [checkpoint]
+   m7 ([:tmp-dirs [m7-stage]]
+         (with-job-conf
+           {"mapred.child.java.opts" "-Xmx3072m"}
+           (?- "m7"
+               (hfs-delimited m7-stage)
+               (measurements (hfs-textline measurements-in)
+                             (hfs-delimited (str trap-root "/m7"))))))
+   d6 ([:tmp-dirs [d6-stage] :deps :last]
+         (?- "d6"
+             (hfs-delimited d6-stage)
+             (devices (hfs-textline devices-in)
+                      (hfs-delimited (str trap-root "/d7")))))
+   r8 ([:tmp-dirs [r8-stage] :deps [m7 d6]]
+         (with-job-conf
+           {"mapred.reduce.tasks" 12
+            "mapred.reduce.slowstart.completed.maps" 0.60}
+           (?- "r8"
+               (hfs-delimited r8-stage)
+               (retrofit-data (hfs-delimited m7-stage)
+                              (hfs-delimited d6-stage)
+                              (hfs-delimited projects-in)
+                              (hfs-delimited (str trap-root "/r8"))))))
+   good ([:deps :all]
+           (with-job-conf
+             {"mapred.reduce.tasks" 12}
+             (?- "gooddata"
+                 (hfs-delimited
+                  output
+                  :sinkmode :replace
+                  :sink-template "%s/%s" :templatefields ["?tsb-id" "?safe-sensor-id"]
+                  :outfields ["?tsb-id" "?entity-id" "?sensor-id" "?tstamp" "?value" "?units" "?type" "?period"])
+                 (good-retrofit-data (hfs-delimited r8-stage)
+                                     (hfs-delimited (str trap-root "good"))))))))
+</pre>
+</div>
+</section>
+</section>
+<section>
+<section id="sec-18" >
+
+<h2>Thank You!</h2>
+<p>
+@otfrom &amp; @MastodonC
+</p>
+
+<p>
+<a href="http://www.mastodonc.com">mastodonc.com</a>
+</p>
+
+<p>
+<a href="http://github.com/MastodonC/r4f-data">github.com/MastodonC/r4f-data</a>
+</p>
+</section>
+</section>
+</div>
+</div>
+<script src="/Users/bld/.emacs.d/non-elpa/reveal.js-2.5.0/lib/js/head.min.js"></script>
+<script src="/Users/bld/.emacs.d/non-elpa/reveal.js-2.5.0/js/reveal.min.js"></script>
+<script>
+
+        		// Full list of configuration options available here:
+        		// https://github.com/hakimel/reveal.js#configuration
+        		Reveal.initialize({
+        			controls: true,
+        			progress: true,
+        			history: false,
+        			center: true,
+        			rollingLinks: false,
+        			keyboard: true,
+        			overview: true,
+        			 // slide width
+        			 // slide height
+        			margin: 0.01, // slide margin
+        			 // slide minimum scaling factor
+        			 // slide maximum scaling factor
+
+
+        			theme: Reveal.getQueryHash().theme, // available themes are in /css/theme
+        			transition: Reveal.getQueryHash().transition || 'concave', // default/cube/page/concave/zoom/linear/fade/none
+        			transitionSpeed: 'default',
+
+        			// Optional libraries used to extend on reveal.js
+        			dependencies: [
+        				{ src: '/Users/bld/.emacs.d/non-elpa/reveal.js-2.5.0/lib/js/classList.js', condition: function() { return !document.body.classList; } }
+        				,{ src: '/Users/bld/.emacs.d/non-elpa/reveal.js-2.5.0/plugin/markdown/showdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } }
+        				,{ src: '/Users/bld/.emacs.d/non-elpa/reveal.js-2.5.0/plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } }
+        				,{ src: '/Users/bld/.emacs.d/non-elpa/reveal.js-2.5.0/plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } }
+        				,{ src: '/Users/bld/.emacs.d/non-elpa/reveal.js-2.5.0/plugin/zoom-js/zoom.js', async: true, condition: function() { return !!document.body.classList; } }
+        				,{ src: '/Users/bld/.emacs.d/non-elpa/reveal.js-2.5.0/plugin/notes/notes.js', async: true, condition: function() { return !!document.body.classList; } }
+        				// { src: '/Users/bld/.emacs.d/non-elpa/reveal.js-2.5.0/plugin/search/search.js', async: true, condition: function() { return !!document.body.classList; } }
+        				// { src: '/Users/bld/.emacs.d/non-elpa/reveal.js-2.5.0/plugin/remotes/remotes.js', async: true, condition: function() { return !!document.body.classList; } }
+         				
+        			]
+        		});
+</script>
+</body>
+</html>
