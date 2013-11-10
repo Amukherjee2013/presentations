@@ -16,8 +16,8 @@
 <section>
 <h1>Cascalog for the 80% of Data Science</h1>
 <h2>Bruce Durling</h2>
-<h2><a href="mailto:@otfrom & @MastodonC">@otfrom & @MastodonC</a></h2>
-<h2></h2></section>
+<h2><a href="mailto:bruce@mastodonc.com">bruce@mastodonc.com</a></h2>
+<h2>11 November 2013</h2></section>
 <section>
 <section id="sec-1" >
 
@@ -75,44 +75,56 @@ If you don't think you have a data quality problem then you haven't looked at yo
 <section>
 <section id="sec-7" >
 
-<h2>Fuller Version</h2>
+<h2>Or&#x2026;</h2>
 <p>
-<a href="http://github.com/MastodonC/r4f-data">github.com/MastodonC/r4f-data</a>
+In Data Science, 80% of time spent prepare data, 20% of time spent
+complain about need for prepare data. - <a href="https://twitter.com/BigDataBorat/status/306596352991830016">Big Data Borat</a>
 </p>
+
+<img src="./img/borat.jpg" alt="borat.jpg" />
 </section>
 </section>
 <section>
 <section id="sec-8" >
 
-<h2>Our Data</h2>
-<div class="org-src-container">
+<h2>Our Open Data</h2>
+<img src="./img/primary-energy-used.png" alt="primary-energy-used.png" />
 
-<pre class="src src-javascript">["64626338343139662d613765332d343632372d623339302d3665646130623437663038643a6170706172656e742d706f776572": [],
- "3130383936303a74656d7065726174757265": [["2010-03-18T00:00:00+0000","error:Measurement was not provided by meter",1297773628134], ["2010-03-18T00:05:00+0000","error:Measurement was not provided by meter",1297773628134], ["2010-03-18T00:10:00+0000","error:Measurement was not provided by meter",1297773628134]],
- "64343337613563392d376636372d346437642d393830362d3835393833306337666435363a656c656374726963697479436f6e73756d7074696f6e": [["2012-02-01T00:00:00+0000","{\"v\":203127}",1330550899258000], ["2012-02-01T00:05:00+0000","{\"v\":203127}",1330550899258001], ["2012-02-01T00:10:00+0000","{\"v\":203127}",1330550899258002], ["2012-02-01T00:15:00+0000","{\"v\":203127}",1330550899258003], ["2012-02-01T00:20:00+0000","{\"v\":203127}",1330550899259000], ["2012-02-01T00:25:00+0000","{\"v\":203127}",1330550899259001]]]
-</pre>
-</div>
+<p>
+<a href="http://www.retrofitanalysis.org/">Retrofit Analysis</a>
+</p>
 </section>
 </section>
 <section>
 <section id="sec-9" >
 
 <h2>Taps</h2>
+</section>
+<section id="sec-9-1" >
+
+<h3>Input</h3>
 <div class="org-src-container">
 
 <pre class="src src-clojure">(hfs-textline measurements-in)
 
 (hfs-delimited m7-stage)
+</pre>
+</div>
+</section>
+<section id="sec-9-2" >
 
-(hfs-delimited (str trap-root "/m7"))
+<h3>Output</h3>
+<div class="org-src-container">
+
+<pre class="src src-clojure">(hfs-delimited (str trap-root "/m7"))
 
 (hfs-delimited
  output
- :sinkmode :replace
- :sink-template "%s/%s"
- :templatefields ["?tsb-id" "?safe-sensor-id"]
- :outfields ["?tsb-id" "?entity-id" "?sensor-id"
-             "?tstamp" "?value" "?units" "?type" "?period"])
+     :sinkmode :replace
+     :sink-template "%s/%s"
+     :templatefields ["?tsb-id" "?safe-sensor-id"]
+     :outfields ["?tsb-id" "?entity-id" "?sensor-id"
+                 "?tstamp" "?value" "?units" "?type" "?period"])
 </pre>
 </div>
 </section>
@@ -121,6 +133,10 @@ If you don't think you have a data quality problem then you haven't looked at yo
 <section id="sec-10" >
 
 <h2>Filtering</h2>
+</section>
+<section id="sec-10-1" >
+
+<h3>Simple Filtering</h3>
 <div class="org-src-container">
 
 <pre class="src src-clojure">(defn data-line? [^String row]
@@ -137,19 +153,69 @@ If you don't think you have a data quality problem then you haven't looked at yo
 </pre>
 </div>
 </section>
+<section id="sec-10-2" >
+
+<h3>Human Err0r</h3>
+</section>
+<section id="sec-10-2-1" >
+
+<h4>Lovely, Lovely Exceptions</h4>
+<div class="org-src-container">
+
+<pre class="src src-clojure">(defn actually-a-mislabeled-pulse-meter?
+  "The following sensor-ids are actually pulse meters."
+  [sensor-id]
+  (#{"8d694dbd-0659-48d4-bb22-f18c6501d9eb:Electrical"
+      "af767a13-09d3-4c44-a613-5b368b8a7be0:Electrical"
+      "2568ce4c-a771-4b77-b1bd-1ea48b22a925:electricityConsumption"
+      "4033e912-7a87-4746-96e4-b70f59f58cc6:electricityConsumption"
+      "76879c63-1da1-4451-8ffb-4073ad33046f:electricityConsumption"
+      "7e2a0c52-5714-4630-974d-fef4630dbdaf:electricityConsumption"
+      "7ec56bb8-4970-406e-b60b-7f8f6f6bfb03:electricityConsumption"
+      "8ecb6061-7318-41a7-8484-86d5121f3f3d:electricityConsumption"
+      "b1b53455-b1c6-4b10-ada4-6aed7a7953e0:electricityConsumption"
+      "cba40c82-2bd5-46b2-849e-b1a0e544ec61:electricityConsumption"
+      "06c7aae5-4191-455d-9418-59aec05c2ac3:gasConsumption"
+      "cbab74c2-aa22-4279-b53d-59c892457fd2:waterConsumption"}
+   sensor-id))
+</pre>
+</div>
+</section>
+<section id="sec-10-2-2" >
+
+<h4>Putting it together</h4>
+<div class="org-src-container">
+
+<pre class="src src-clojure">(defn pulse-measurement? [type sensor-id]
+  (or (actually-a-mislabeled-pulse-meter? sensor-id)
+      (= type "ElecMeterPulse")
+      (= type "GasMeterPulse")
+      (= type "CHPElecOutputPulse")
+      (= type "ElecExportPulse")
+      (= type "PVElecOutputPulse")
+      (= type "WaterMeterPulse")))
+</pre>
+</div>
+</section>
 </section>
 <section>
 <section id="sec-11" >
 
-<h2>mapcat with json</h2>
+<h2>mapping data with functions</h2>
 <div class="org-src-container">
 
-<pre class="src src-clojure">(defmapcatop verticalize-measurement-rows [^String row]
-  (-&gt;&gt; (json/parse-string row)
-       (remove errored-measurement?)
-       (map (fn [[m-tstamp value _]]
-              [m-tstamp (-&gt; (json/parse-string value)
-                            (get "v"))]))))
+<pre class="src src-clojure">(defn embed-date [d-string]
+  (t-format/parse (t-format/formatter "yyyy-MM-dd'T'HH:mm:ssZ") d-string))
+
+(defn just-date [date-time-string]
+  (t-format/unparse
+   (t-format/formatter "yyyy-MM-dd")
+   (embed-date date-time-string)))
+
+(defn mean [sum count]
+  (if (zero? count)
+    0
+    (float (/ sum count))))
 </pre>
 </div>
 </section>
@@ -157,17 +223,31 @@ If you don't think you have a data quality problem then you haven't looked at yo
 <section>
 <section id="sec-12" >
 
-<h2>mapcat with regex</h2>
+<h2>mapcat operations</h2>
+</section>
+<section id="sec-12-1" >
+
+<h3>with json</h3>
 <div class="org-src-container">
 
-<pre class="src src-clojure">;; and only do the json parsing on the individual
-;; elements after splitting the huge string
-(defmapcatop breakout-readings [^String row]
-  (re-seq #"\[[^\]\[]*\]" row))
+<pre class="src src-clojure">(defn sensor-locations [{:keys [deviceId location description readings]}]
+  (infof "Getting sensors from device: %s location: %s description: %s" deviceId location description)
+  (map (fn [{:strs [type unit period]}]
+         [(sensor-id deviceId type)
+          (or location "N/A")
+          (or description "N/A")])
+       (json/parse-string readings)))
+</pre>
+</div>
+</section>
+<section id="sec-12-2" >
 
-(defn reading-data [reading-str]
-  (let [[tstamp value _] (json/parse-string reading-str)]
-    [tstamp (-&gt; (json/parse-string value) (get "v"))]))
+<h3>with regex</h3>
+<div class="org-src-container">
+
+<pre class="src src-clojure">(defmapcatop breakout-readings [^String row]
+  (infof "Attempting to get readings out of a %s length row." (.length row))
+  (re-seq #"\[[^\]\[]*\]" row))
 </pre>
 </div>
 </section>
@@ -175,22 +255,26 @@ If you don't think you have a data quality problem then you haven't looked at yo
 <section>
 <section id="sec-13" >
 
-<h2>A scrubbed query</h2>
+<h2>buffer operations</h2>
 <div class="org-src-container">
 
-<pre class="src src-clojure">(defn measurements [input trap]
-  (infof "Getting Measurements.")
-  (&lt;- [?sensor-id ?tstamp ?value]
-      (input ?line)
-      (etl/data-line? ?line)
-      (non-aggregation? ?line)
-      (etl/split-sstable-row ?line :&gt; ?sensor-id-hex ?sensor-data)
-      (sensor-has-data? ?sensor-data)
-      (etl/unhexify ?sensor-id-hex :&gt; ?sensor-id)
-      (breakout-readings ?sensor-data :&gt; ?reading)
-      (non-error-reading? ?reading)
-      (reading-data ?reading :&gt; ?tstamp ?value)
-      (:trap trap)))
+<pre class="src src-clojure">(defbufferop daily-measurement [tuples]
+  (let [[value type sensor-id] (first tuples)
+        values (map (fn [[value type _]] value) tuples)]
+    (cond
+     (cumulative-measurement? type sensor-id)
+     [value]
+     (pulse-measurement? type sensor-id)
+     [(reduce + 0 values)]
+     :else
+     (let [{:keys [count sum]} ;; fixme to just do last for now
+           (reduce
+             (fn [acc new]
+               (-&gt; (assoc acc :sum (+ (:sum acc) new))
+                   (assoc :count (inc (:count acc)))))
+             {:sum 0 :count 0}
+             values)]
+       [(mean sum count)]))))
 </pre>
 </div>
 </section>
@@ -198,25 +282,17 @@ If you don't think you have a data quality problem then you haven't looked at yo
 <section>
 <section id="sec-14" >
 
-<h2>Testing with Midje</h2>
+<h2>A scrubbed query</h2>
 <div class="org-src-container">
 
-<pre class="src src-clojure">(ns r4f-data.measurements-test
-  (:use midje.sweet
-        midje.cascalog
-        r4f-data.measurements))
-
-(def m7-data [["\"64626338343139662d613765332d343632372d623339302d3665646130623437663038643a6170706172656e742d706f776572\": [],"]
-              ["\"3130383936303a74656d7065726174757265\": [[\"2010-03-18T00:00:00+0000\",\"error:Measurement was not provided by meter\",1297773628134], [\"2010-03-18T00:05:00+0000\",\"error:Measurement was not provided by meter\",1297773628134], [\"2010-03-18T00:10:00+0000\",\"error:Measurement was not provided by meter\",1297773628134]],"]
-              ["\"64343337613563392d376636372d346437642d393830362d3835393833306337666435363a656c656374726963697479436f6e73756d7074696f6e\": [[\"2012-02-01T00:00:00+0000\",\"{\\\"v\\\":203127}\",1330550899258000], [\"2012-02-01T00:05:00+0000\",\"{\\\"v\\\":203127}\",1330550899258001], [\"2012-02-01T00:10:00+0000\",\"{\\\"v\\\":203127}\",1330550899258002], [\"2012-02-01T00:15:00+0000\",\"{\\\"v\\\":203127}\",1330550899258003], [\"2012-02-01T00:20:00+0000\",\"{\\\"v\\\":203127}\",1330550899259000], [\"2012-02-01T00:25:00+0000\",\"{\\\"v\\\":203127}\",1330550899259001]],"]])
-
-(fact (measurements m7-data (cascalog.api/stdout)) =&gt;
-      (produces [["d437a5c9-7f67-4d7d-9806-859830c7fd56:electricityConsumption" "2012-02-01T00:00:00+0000" 203127]
-                 ["d437a5c9-7f67-4d7d-9806-859830c7fd56:electricityConsumption" "2012-02-01T00:05:00+0000" 203127]
-                 ["d437a5c9-7f67-4d7d-9806-859830c7fd56:electricityConsumption" "2012-02-01T00:10:00+0000" 203127]
-                 ["d437a5c9-7f67-4d7d-9806-859830c7fd56:electricityConsumption" "2012-02-01T00:15:00+0000" 203127]
-                 ["d437a5c9-7f67-4d7d-9806-859830c7fd56:electricityConsumption" "2012-02-01T00:20:00+0000" 203127]
-                 ["d437a5c9-7f67-4d7d-9806-859830c7fd56:electricityConsumption" "2012-02-01T00:25:00+0000" 203127]]))
+<pre class="src src-clojure">(defn devices [devices-in trap]
+  (infof "Querying devices from %s" devices-in)
+  (&lt;- [?sensor-id ?device-id ?entity-id ?type ?units ?period]
+      (devices-in ?line)
+      (etl/data-line? ?line)
+      (etl/split-sstable-row ?line :&gt; ?rowkey-hex ?device)
+      (sensor-records ?device :&gt; ?sensor-id ?device-id ?entity-id ?type ?units ?period)
+      (:trap trap)))
 </pre>
 </div>
 </section>
@@ -241,32 +317,39 @@ If you don't think you have a data quality problem then you haven't looked at yo
 <section>
 <section id="sec-16" >
 
-<h2>Query planning</h2>
-<p>
-hadoop jar r4f-data.jar s3n://bucket/m7 s3n://bucket/d7 s3n://bucket/projects \
-/user/bld/checkpoint s3n://bucket/output-$(date +%Y%m%d-%H%M) /user/bld/exceptions
-</p>
-
+<h2>workflow</h2>
 <div class="org-src-container">
 
-<pre class="src src-clojure">(defn -main [measurements-in devices-in projects-in checkpoint output trap-root &amp; args]
-  (?- "gooddata"
-      (hfs-delimited
-       output
-       :sinkmode :replace
-       :sink-template "%s/%s" :templatefields ["?tsb-id" "?safe-sensor-id"]
-       :outfields ["?tsb-id" "?entity-id" "?sensor-id" "?tstamp" "?value" "?units" "?type" "?period"])
-      (good-retrofit-data
-       (retrofit-data
-        (measurements
-         (hfs-textline measurements-in)
-         (hfs-delimited (str trap-root "/m7")))
-        (devices
-         (hfs-textline devices-in)
-         (hfs-delimited (str trap-root "/d7")))
-        (hfs-delimited projects-in)
-        (hfs-delimited (str trap-root "/r8")))
-       (hfs-delimited (str trap-root "good")))))
+<pre class="src src-clojure">(defn -main [in checkpoint out trap-root &amp; args]
+  (workflow
+   [checkpoint]
+   good ([:tmp-dirs good-stage :deps nil]
+           (with-job-conf
+             {"mapred.child.java.opts" "-Xmx3072m"}
+             (?- "gooddata"
+                 (hfs-seqfile good-stage)
+                 (good-retrofit-data
+                  (retrofit-data
+                   (measurements (hfs-textline (str in "m7/"))
+                                 (hfs-delimited (str trap-root "m7/")))
+                   (devices (hfs-textline (str in "/d6"))
+                            (hfs-delimited (str trap-root "d7/")))
+                   (hfs-delimited (str in "projects/"))
+                   (hfs-delimited (str trap-root "r8/")))
+                  (hfs-delimited (str trap-root "good/"))))))
+   daily ([:deps [good]]
+            (with-job-conf
+              {"mapred.output.compress" "false"
+               "mapred.child.java.opts" "-server -Xmx4096m"}
+              (?- "dailydata"
+                  (hfs-delimited
+                   (str out "daily/")
+                   :sinkmode :replace
+                   :sink-template "%s/%s" :templatefields ["?tsb-id" "?safe-sensor-id"]
+                   :outfields ["?tsb-id" "?sensor-id" "?type" "?units"
+                               "?period" "?date" "?daily-val"])
+                  (tsb-daily-measurements (hfs-seqfile good-stage)
+                                          (hfs-delimited (str trap-root "daily/"))))))))
 </pre>
 </div>
 </section>
@@ -274,55 +357,17 @@ hadoop jar r4f-data.jar s3n://bucket/m7 s3n://bucket/d7 s3n://bucket/projects \
 <section>
 <section id="sec-17" >
 
-<h2>workflow</h2>
-<div class="org-src-container">
-
-<pre class="src src-clojure">(defn -main [measurements-in devices-in projects-in checkpoint output trap-root &amp; args]
-  (workflow
-   [checkpoint]
-   m7 ([:tmp-dirs [m7-stage]]
-         (with-job-conf
-           {"mapred.child.java.opts" "-Xmx3072m"}
-           (?- "m7"
-               (hfs-delimited m7-stage)
-               (measurements (hfs-textline measurements-in)
-                             (hfs-delimited (str trap-root "/m7"))))))
-   d6 ([:tmp-dirs [d6-stage] :deps :last]
-         (?- "d6"
-             (hfs-delimited d6-stage)
-             (devices (hfs-textline devices-in)
-                      (hfs-delimited (str trap-root "/d7")))))
-   r8 ([:tmp-dirs [r8-stage] :deps [m7 d6]]
-         (with-job-conf
-           {"mapred.reduce.tasks" 12
-            "mapred.reduce.slowstart.completed.maps" 0.60}
-           (?- "r8"
-               (hfs-delimited r8-stage)
-               (retrofit-data (hfs-delimited m7-stage)
-                              (hfs-delimited d6-stage)
-                              (hfs-delimited projects-in)
-                              (hfs-delimited (str trap-root "/r8"))))))
-   good ([:deps :all]
-           (with-job-conf
-             {"mapred.reduce.tasks" 12}
-             (?- "gooddata"
-                 (hfs-delimited
-                  output
-                  :sinkmode :replace
-                  :sink-template "%s/%s" :templatefields ["?tsb-id" "?safe-sensor-id"]
-                  :outfields ["?tsb-id" "?entity-id" "?sensor-id" "?tstamp" "?value" "?units" "?type" "?period"])
-                 (good-retrofit-data (hfs-delimited r8-stage)
-                                     (hfs-delimited (str trap-root "good"))))))))
-</pre>
-</div>
-</section>
-</section>
-<section>
-<section id="sec-18" >
-
 <h2>Thank You!</h2>
 <p>
-@otfrom &amp; @MastodonC
+Bruce Durling
+</p>
+
+<p>
+CTO Mastodon C
+</p>
+
+<p>
+<a href="http://twitter.com/otfrom">@otfrom</a> &amp; <a href="http://twitter.com/MastodonC">@MastodonC</a>
 </p>
 
 <p>
@@ -330,7 +375,7 @@ hadoop jar r4f-data.jar s3n://bucket/m7 s3n://bucket/d7 s3n://bucket/projects \
 </p>
 
 <p>
-<a href="http://github.com/MastodonC/r4f-data">github.com/MastodonC/r4f-data</a>
+<a href="https://github.com/otfrom/presentations/tree/master/cascalog-for-80-percent">github.com/otfrom/presentations/tree/master/cascalog-for-80-percent</a>
 </p>
 </section>
 </section>
@@ -352,7 +397,7 @@ hadoop jar r4f-data.jar s3n://bucket/m7 s3n://bucket/d7 s3n://bucket/projects \
         			overview: true,
         			 // slide width
         			 // slide height
-        			margin: 0.01, // slide margin
+        			 // slide margin
         			 // slide minimum scaling factor
         			 // slide maximum scaling factor
 
