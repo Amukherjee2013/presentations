@@ -5,25 +5,26 @@
 #+DATE: 11 November 2013
 #+REVEAL_THEME: night
 #+REVEAL_TRANS: concave
-* Nathan Marz
+* Standing on the Shoulders of Giants
+** Nathan Marz
 
-  [[http://bit.ly/cascalog][bit.ly/cascalog]]
-  
-* Stefan Hübner
+   [[http://bit.ly/cascalog][bit.ly/cascalog]]
+   
+** Stefan Hübner
 
-  [[http://bit.ly/hadoop-sanity][bit.ly/hadoop-sanity]]
+   [[http://bit.ly/hadoop-sanity][bit.ly/hadoop-sanity]]
 
-* Paul Lam
+** Paul Lam
 
-  [[http://bit.ly/cascalog-now][bit.ly/cascalog-now]]
+   [[http://bit.ly/cascalog-now][bit.ly/cascalog-now]]
 
-* Paco Nathan
+** Paco Nathan
 
-  [[http://bit.ly/copa-cascalog][bit.ly/copa-cascalog]]
+   [[http://bit.ly/copa-cascalog][bit.ly/copa-cascalog]]
 
-* CDEC Open Health Data Platform
+** CDEC Open Health Data Platform
 
-  [[http://github.com/CDECatapult][github.com/CDECatapult]]
+   [[http://github.com/CDECatapult][github.com/CDECatapult]]
 
 * 80% of Data Science
 
@@ -42,6 +43,10 @@
 
   [[http://www.retrofitanalysis.org/][Retrofit Analysis]]
 
+** For All of These Houses
+
+   [[./img/embed.png]]
+   
 ** Devices
 
    #+BEGIN_SRC javascript
